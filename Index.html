@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revemar — Consórcio</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --red:    #8B0000;
+    --red2:   #A50000;
+    --red3:   #C41E1E;
+    --text:   #FFFFFF;
+    --muted:  rgba(255,255,255,0.5);
+    --border: rgba(139,0,0,0.5);
+    --card:   rgba(70,0,0,0.4);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Barlow',sans-serif; background:#000; color:var(--text); height:100vh; overflow:hidden; }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 90% 80% at 5% 50%, rgba(110,0,0,0.75) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 60% at 95% 10%, rgba(70,0,0,0.4) 0%, transparent 50%),
+      radial-gradient(ellipse 50% 50% at 50% 105%, rgba(50,0,0,0.5) 0%, transparent 55%),
+      #000;
+  }
+  .page { position:relative; z-index:1; width:100%; height:100vh; display:none; }
+  .page.active { display:flex; }
+  .site-credit { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); font-size:11px; color:var(--muted); letter-spacing:1px; z-index:10; }
+
+  /* ── LOGIN ── */
+  #page-login { align-items:center; justify-content:center; flex-direction:column; gap:14px; }
+  .login-title { font-family:'Bebas Neue'; font-size:48px; letter-spacing:8px; background:var(--red); padding:12px 56px; border-radius:14px; margin-bottom:8px; }
+  .login-field { width:280px; display:flex; align-items:center; gap:12px; background:var(--red); border-radius:8px; padding:11px 16px; }
+  .login-field input { background:none; border:none; outline:none; color:var(--text); font-size:14px; width:100%; autocapitalize:none; }
+  .login-field input::placeholder { color:rgba(255,255,255,0.4); }
+  .login-field-icon { font-size:18px; opacity:0.8; flex-shrink:0; }
+  .toggle-pw { cursor:pointer; font-size:16px; opacity:0.7; flex-shrink:0; transition:opacity 0.2s; user-select:none; }
+  .toggle-pw:hover { opacity:1; }
+  .login-error { width:280px; background:rgba(139,0,0,0.5); border:1px solid var(--red3); border-radius:8px; padding:10px 14px; font-size:13px; color:#FCA5A5; display:none; text-align:center; }
+  .login-error.show { display:block; }
+  .login-success { width:280px; background:rgba(0,80,0,0.5); border:1px solid #4ade80; border-radius:8px; padding:10px 14px; font-size:13px; color:#4ade80; display:none; text-align:center; }
+  .login-success.show { display:block; }
+  .login-required { width:280px; font-size:11px; color:rgba(255,100,100,0.8); display:none; margin-top:-8px; }
+  .login-required.show { display:block; }
+  .login-btn { width:280px; padding:13px; background:var(--red2); border:2px solid #2222CC; border-radius:8px; color:var(--text); font-size:15px; font-weight:700; cursor:pointer; transition:background 0.2s; margin-top:4px; }
+  .login-btn:hover { background:var(--red3); }
+  .alterar-link { font-size:12px; color:var(--muted); cursor:pointer; text-decoration:underline; transition:color 0.2s; margin-top:4px; }
+  .alterar-link:hover { color:var(--text); }
+
+  /* ── FORM ALTERAR SENHA ── */
+  .alterar-form { display:none; flex-direction:column; gap:14px; align-items:center; width:100%; }
+  .alterar-form.show { display:flex; }
+  .login-form { display:flex; flex-direction:column; gap:14px; align-items:center; width:100%; }
+  .login-form.hide { display:none; }
+  .alterar-title { font-family:'Bebas Neue'; font-size:28px; letter-spacing:4px; color:var(--text); }
+  .pw-hint { width:280px; font-size:11px; color:var(--muted); margin-top:-8px; }
+
+  /* ── LAYOUT ── */
+  .layout { display:flex; width:100%; height:100vh; }
+  .sidebar { width:190px; flex-shrink:0; background:rgba(0,0,0,0.55); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:16px 0; gap:4px; }
+  .nav-btn { display:block; width:calc(100% - 20px); margin:0 10px; padding:11px 14px; background:transparent; border:2px solid #2222AA; border-radius:6px; color:var(--text); font-family:'Barlow'; font-size:13px; font-weight:700; cursor:pointer; text-align:left; transition:all 0.2s; }
+  .nav-btn:hover { background:rgba(139,0,0,0.25); border-color:var(--red3); }
+  .logout-wrap { margin-top:auto; padding:14px 10px 4px; }
+  .logout-icon { width:34px; height:34px; background:var(--red); border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:17px; transition:background 0.2s; }
+  .logout-icon:hover { background:var(--red3); }
+  .main-content { flex:1; overflow-y:auto; padding:22px 24px; display:flex; flex-direction:column; gap:18px; }
+
+  /* ── DASHBOARD ── */
+  .dash-top { display:flex; gap:18px; align-items:flex-start; }
+  .stat-col { display:flex; flex-direction:column; gap:14px; flex-shrink:0; }
+  .stat-box { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 22px; min-width:150px; }
+  .stat-lbl { font-size:13px; color:var(--muted); margin-bottom:4px; }
+  .stat-val { font-family:'Bebas Neue'; font-size:44px; line-height:1; }
+  .stat-val-sm { font-family:'Bebas Neue'; font-size:26px; line-height:1; margin-top:4px; }
+  .chart-box { flex:1; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px; }
+  .chart-legend-row { display:flex; gap:16px; justify-content:flex-end; margin-bottom:8px; }
+  .leg { display:flex; align-items:center; gap:6px; font-size:12px; }
+  .leg-dot { width:10px; height:10px; border-radius:50%; }
+  .summary { display:flex; gap:28px; font-size:14px; }
+  .summary span { font-weight:700; }
+  .search-bar-wrap { display:flex; align-items:center; background:rgba(50,0,0,0.6); border:1px solid var(--border); border-radius:50px; padding:4px 4px 4px 20px; gap:10px; }
+  .search-bar-input { flex:1; background:none; border:none; outline:none; color:var(--text); font-size:14px; font-family:'Barlow'; padding:8px 0; }
+  .search-bar-input::placeholder { color:var(--muted); }
+  .search-bar-btn { background:var(--red2); border:none; border-radius:50px; color:var(--text); font-size:13px; font-weight:700; padding:10px 24px; cursor:pointer; flex-shrink:0; transition:background 0.2s; }
+  .search-bar-btn:hover { background:var(--red3); }
+  .table-wrap { background:var(--card); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .table-title { padding:12px 18px; font-size:14px; font-weight:700; border-bottom:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; }
+  thead th { background:#1E3A8A; padding:9px 14px; text-align:left; font-size:12px; font-weight:700; }
+  tbody tr { border-bottom:1px solid rgba(139,0,0,0.2); cursor:pointer; transition:background 0.15s; }
+  tbody tr:hover { background:rgba(139,0,0,0.2); }
+  tbody tr:last-child { border-bottom:none; }
+  td { padding:9px 14px; font-size:13px; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:4px; font-size:11px; font-weight:700; }
+  .b-bord { background:rgba(30,58,138,0.5); color:#93C5FD; }
+  .b-chec { background:rgba(120,53,15,0.5); color:#FCD34D; }
+  .b-reje { background:rgba(139,0,0,0.5); color:#FCA5A5; }
+  .b-desi { background:rgba(60,60,60,0.5); color:#D1D5DB; }
+
+  /* ── PROCESSO ── */
+  .proc-wrap { max-width:680px; display:flex; flex-direction:column; gap:16px; }
+  .fld-lbl { font-size:13px; color:var(--muted); margin-bottom:6px; display:block; }
+  .fld-input { width:100%; background:rgba(139,0,0,0.3); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:12px 16px; font-size:14px; outline:none; transition:border-color 0.2s; }
+  .fld-input:focus { border-color:var(--red3); }
+  .fld-input::placeholder { color:rgba(255,255,255,0.3); }
+  .fld-textarea { width:100%; background:rgba(139,0,0,0.3); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:12px 16px; font-size:12px; font-family:monospace; outline:none; resize:vertical; min-height:200px; line-height:1.6; transition:border-color 0.2s; }
+  .fld-textarea:focus { border-color:var(--red3); }
+  .fld-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .file-btn { display:inline-flex; align-items:center; gap:6px; background:rgba(139,0,0,0.4); border:1px solid var(--border); border-radius:6px; padding:7px 14px; font-size:12px; cursor:pointer; color:var(--text); transition:background 0.2s; }
+  .file-btn:hover { background:rgba(196,30,30,0.5); border-color:var(--red3); }
+
+  /* ── CLIENTE ── */
+  .cli-name { font-family:'Bebas Neue'; font-size:54px; letter-spacing:2px; }
+  .cli-grid { display:grid; grid-template-columns:1fr 240px; gap:24px; align-items:start; margin-top:8px; }
+  .cli-fields { display:flex; flex-direction:column; gap:10px; }
+  .cli-field { display:flex; align-items:center; gap:10px; font-size:14px; font-weight:600; }
+  .copy-btn { width:26px; height:26px; border:1px solid var(--border); border-radius:4px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; opacity:0.7; flex-shrink:0; }
+  .status-label { font-size:12px; color:var(--muted); margin-bottom:6px; display:block; }
+  .status-select { width:100%; background:rgba(139,0,0,0.5); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:12px 16px; font-size:14px; font-weight:600; outline:none; cursor:pointer; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='white' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; }
+  .status-select option { background:#3B0000; color:var(--text); }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<!-- LOGIN -->
+<div class="page active" id="page-login">
+
+  <!-- Formulário de login -->
+  <div class="login-form" id="login-form">
+    <div class="login-title">LOGIN</div>
+    <div id="login-error" class="login-error">Usuário ou senha incorretos.</div>
+
+    <div class="login-field">
+      <span class="login-field-icon">👤</span>
+      <input type="text" id="login-user" placeholder="Matrícula" autocapitalize="none" autocomplete="off">
+    </div>
+    <div id="req-user" class="login-required">Campo obrigatório</div>
+
+    <div class="login-field">
+      <span class="login-field-icon">🔒</span>
+      <input type="password" id="login-pw" placeholder="Senha" autocapitalize="none" autocomplete="off">
+      <span class="toggle-pw" onclick="togglePw('login-pw','toggle-login')" id="toggle-login">👁</span>
+    </div>
+    <div id="req-pw" class="login-required">Campo obrigatório</div>
+
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <span class="alterar-link" onclick="showAlterar()">Alterar senha</span>
+  </div>
+
+  <!-- Formulário de alterar senha -->
+  <div class="alterar-form" id="alterar-form">
+    <div class="alterar-title">ALTERAR SENHA</div>
+    <div id="alterar-error" class="login-error">Usuário ou senha antiga incorretos.</div>
+    <div id="alterar-success" class="login-success">Senha alterada com sucesso!</div>
+
+    <div class="login-field">
+      <span class="login-field-icon">👤</span>
+      <input type="text" id="alt-user" placeholder="Matrícula" autocapitalize="none" autocomplete="off">
+    </div>
+    <div id="req-alt-user" class="login-required">Campo obrigatório</div>
+
+    <div class="login-field">
+      <span class="login-field-icon">🔒</span>
+      <input type="password" id="alt-pw-old" placeholder="Senha atual" autocapitalize="none" autocomplete="off">
+      <span class="toggle-pw" onclick="togglePw('alt-pw-old','toggle-old')" id="toggle-old">👁</span>
+    </div>
+    <div id="req-alt-old" class="login-required">Campo obrigatório</div>
+
+    <div class="login-field">
+      <span class="login-field-icon">🔑</span>
+      <input type="password" id="alt-pw-new" placeholder="Nova senha" autocapitalize="none" autocomplete="off">
+      <span class="toggle-pw" onclick="togglePw('alt-pw-new','toggle-new')" id="toggle-new">👁</span>
+    </div>
+    <div id="req-alt-new" class="login-required">Campo obrigatório</div>
+    <div class="pw-hint">Mínimo 4 caracteres</div>
+
+    <div class="login-field">
+      <span class="login-field-icon">🔑</span>
+      <input type="password" id="alt-pw-confirm" placeholder="Confirmar nova senha" autocapitalize="none" autocomplete="off">
+      <span class="toggle-pw" onclick="togglePw('alt-pw-confirm','toggle-confirm')" id="toggle-confirm">👁</span>
+    </div>
+    <div id="req-alt-confirm" class="login-required">As senhas não coincidem</div>
+
+    <button class="login-btn" onclick="doAlterar()">Confirmar</button>
+    <span class="alterar-link" onclick="showLogin()">← Voltar ao login</span>
+  </div>
+
+  <div class="site-credit">Site feito por KAYKE</div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="page" id="page-dashboard">
+  <div class="layout">
+    <aside class="sidebar">
+      <button class="nav-btn" onclick="goTo('page-processo')">Novo Processo</button>
+      <button class="nav-btn">TBD</button>
+      <div class="logout-wrap">
+        <div class="logout-icon" onclick="goTo('page-login')" title="Sair">⏻</div>
+      </div>
+    </aside>
+    <div class="main-content">
+      <div class="dash-top">
+        <div class="stat-col">
+          <div class="stat-box"><div class="stat-lbl">Vendas</div><div class="stat-val">110</div></div>
+          <div class="stat-box"><div class="stat-lbl">Comissão</div><div class="stat-val-sm">R$ 4.820,00</div></div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-legend-row">
+            <div class="leg"><div class="leg-dot" style="background:var(--red3)"></div>Borderadas</div>
+            <div class="leg"><div class="leg-dot" style="background:#4A0000"></div>Canceladas</div>
+          </div>
+          <canvas id="pieChart" width="200" height="200" style="max-width:200px;max-height:200px;"></canvas>
+        </div>
+      </div>
+      <div class="summary">
+        <div>Vendas: <span>111</span></div>
+        <div>Cancelamentos: <span>222</span></div>
+        <div>Comissao: <span>R$ 333</span></div>
+      </div>
+      <div class="search-bar-wrap">
+        <input class="search-bar-input" type="text" placeholder="Buscar cliente, modelo, CPF...">
+        <button class="search-bar-btn">Pesquisar</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-title">Últimos Clientes</div>
+        <table>
+          <thead><tr><th>Name</th><th>Date</th><th>Model</th><th>Status</th><th>commission</th></tr></thead>
+          <tbody>
+            <tr onclick="goTo('page-cliente')"><td>TEST NAME.</td><td>01/01/2001.</td><td>TEST MODEL</td><td><span class="badge b-bord">BORDERADA</span></td><td>R$. XXXX</td></tr>
+            <tr onclick="goTo('page-cliente')"><td>TEST NAME.</td><td>01/01/2001.</td><td>TEST MODEL</td><td><span class="badge b-bord">BORDERADA</span></td><td>R$. XXXX</td></tr>
+            <tr onclick="goTo('page-cliente')"><td>TEST NAME.</td><td>01/01/2001.</td><td>TEST MODEL</td><td><span class="badge b-chec">CHECAGEM</span></td><td>R$. XXXX</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="site-credit">Site feito por KAYKE</div>
+</div>
+
+<!-- NOVO PROCESSO -->
+<div class="page" id="page-processo">
+  <div class="layout">
+    <aside class="sidebar">
+      <button class="nav-btn" onclick="goTo('page-dashboard')">Início</button>
+      <button class="nav-btn">TBD</button>
+      <div class="logout-wrap">
+        <div class="logout-icon" onclick="goTo('page-login')" title="Sair">⏻</div>
+      </div>
+    </aside>
+    <div class="main-content">
+      <div class="proc-wrap">
+        <div><label class="fld-lbl">Número do Recibo</label><input class="fld-input" type="text"></div>
+        <div><label class="fld-lbl">Número da Proposta</label><input class="fld-input" type="text"></div>
+        <div>
+          <div class="fld-row">
+            <label class="fld-lbl" style="margin:0">Dados:</label>
+            <label class="file-btn">📎 Escolher Arquivo<input type="file" accept=".pdf" style="display:none" onchange="handleFile(this)"></label>
+          </div>
+          <textarea class="fld-textarea" id="dadosTextarea" placeholder="Cole os dados aqui..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="site-credit">Site feito por KAYKE</div>
+</div>
+
+<!-- CLIENTE -->
+<div class="page" id="page-cliente">
+  <div class="layout">
+    <aside class="sidebar">
+      <button class="nav-btn" onclick="goTo('page-dashboard')">Início</button>
+      <button class="nav-btn">TBD</button>
+      <div class="logout-wrap">
+        <div class="logout-icon" onclick="goTo('page-login')" title="Sair">⏻</div>
+      </div>
+    </aside>
+    <div class="main-content">
+      <div class="cli-name">Test Name</div>
+      <div class="cli-grid">
+        <div class="cli-fields">
+          <div class="cli-field"><span>NOME COMPLETO</span><div class="copy-btn">⧉</div></div>
+          <div class="cli-field"><span>RG</span><div class="copy-btn">⧉</div></div>
+          <div class="cli-field"><span>CPF</span><div class="copy-btn">⧉</div></div>
+          <div class="cli-field"><span>MODELO</span></div>
+          <div class="cli-field"><span>VENCIMENTO</span></div>
+          <div class="cli-field"><span>CONTATO</span><div class="copy-btn">⧉</div></div>
+          <div class="cli-field"><span>COMISSAO</span></div>
+        </div>
+        <div>
+          <label class="status-label">Selecione o Status</label>
+          <select class="status-select">
+            <option value="" disabled selected>Selecione...</option>
+            <option>CHECAGEM</option>
+            <option>BORDERADA</option>
+            <option>REJEITADA</option>
+            <option>CLIENTE DESISTIU</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="site-credit">Site feito por KAYKE</div>
+</div>
+
+<script>
+const USERS = { '29070012': 'luan', 'kayke': 'admin' };
+
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pw   = document.getElementById('login-pw').value.trim();
+  let ok = true;
+  document.getElementById('req-user').classList.remove('show');
+  document.getElementById('req-pw').classList.remove('show');
+  document.getElementById('login-error').classList.remove('show');
+  if (!user) { document.getElementById('req-user').classList.add('show'); ok = false; }
+  if (!pw)   { document.getElementById('req-pw').classList.add('show');   ok = false; }
+  if (!ok) return;
+  if (USERS[user] && USERS[user] === pw) {
+    goTo('page-dashboard');
+  } else {
+    document.getElementById('login-error').classList.add('show');
+  }
+}
+
+function doAlterar() {
+  const user    = document.getElementById('alt-user').value.trim();
+  const pwOld   = document.getElementById('alt-pw-old').value.trim();
+  const pwNew   = document.getElementById('alt-pw-new').value.trim();
+  const pwConf  = document.getElementById('alt-pw-confirm').value.trim();
+  let ok = true;
+
+  ['req-alt-user','req-alt-old','req-alt-new','req-alt-confirm'].forEach(id => document.getElementById(id).classList.remove('show'));
+  document.getElementById('alterar-error').classList.remove('show');
+  document.getElementById('alterar-success').classList.remove('show');
+
+  if (!user)  { document.getElementById('req-alt-user').classList.add('show'); ok = false; }
+  if (!pwOld) { document.getElementById('req-alt-old').classList.add('show');  ok = false; }
+  if (!pwNew || pwNew.length < 4) { document.getElementById('req-alt-new').classList.add('show'); ok = false; }
+  if (pwNew !== pwConf) { document.getElementById('req-alt-confirm').classList.add('show'); ok = false; }
+  if (!ok) return;
+
+  if (!USERS[user] || USERS[user] !== pwOld) {
+    document.getElementById('alterar-error').classList.add('show');
+    return;
+  }
+  USERS[user] = pwNew;
+  document.getElementById('alterar-success').classList.add('show');
+  setTimeout(() => showLogin(), 1500);
+}
+
+function showAlterar() {
+  document.getElementById('login-form').classList.add('hide');
+  document.getElementById('alterar-form').classList.add('show');
+}
+function showLogin() {
+  document.getElementById('alterar-form').classList.remove('show');
+  document.getElementById('login-form').classList.remove('hide');
+  ['alterar-error','alterar-success'].forEach(id => document.getElementById(id).classList.remove('show'));
+}
+
+function togglePw(inputId, iconId) {
+  const input = document.getElementById(inputId);
+  const icon  = document.getElementById(iconId);
+  if (input.type === 'password') { input.type = 'text';     icon.textContent = '🙈'; }
+  else                           { input.type = 'password'; icon.textContent = '👁'; }
+}
+
+function goTo(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function handleFile(input) {
+  if (input.files && input.files[0])
+    document.getElementById('dadosTextarea').placeholder = '✓ ' + input.files[0].name + ' selecionado';
+}
+
+window.addEventListener('load', () => {
+  new Chart(document.getElementById('pieChart').getContext('2d'), {
+    type: 'pie',
+    data: {
+      labels: ['Borderadas', 'Canceladas'],
+      datasets: [{ data: [80, 30], backgroundColor: ['#C41E1E','#4A0000'], borderWidth: 0 }]
+    },
+    options: { responsive: false, plugins: { legend: { display: false } } }
+  });
+  document.getElementById('login-pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+});
+</script>
+</body>
+</html>
